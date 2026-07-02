@@ -8,21 +8,39 @@ exports.getStats = async (req, res) => {
     // 1. Total applications
     const totalApplications = await Application.countDocuments({ userId });
 
-    // 2. Applications by status — ✅ FIXED: Use $project + $group
-    const statusStats = await Application.aggregate([
-      { $match: { userId } },
-      { $project: { status: 1 } }, // ✅ explicitly include status
-      { $group: { _id: '$status', count: { $sum: 1 } } },
-    ]);
+    // 2. Count each status manually (✅ bulletproof)
+    const appliedCount = await Application.countDocuments({ userId, status: 'applied' });
+    const assessmentCount = await Application.countDocuments({ userId, status: 'assessment' });
+    const interviewingCount = await Application.countDocuments({ userId, status: 'interviewing' });
+    const offerCount = await Application.countDocuments({ userId, status: 'offer' });
+    const rejectedCount = await Application.countDocuments({ userId, status: 'rejected' });
 
-    // 3. Applications by source
-    const sourceStats = await Application.aggregate([
-      { $match: { userId } },
-      { $project: { source: 1 } },
-      { $group: { _id: '$source', count: { $sum: 1 } } },
-    ]);
+    const statusStats = [
+      { _id: 'applied', count: appliedCount },
+      { _id: 'assessment', count: assessmentCount },
+      { _id: 'interviewing', count: interviewingCount },
+      { _id: 'offer', count: offerCount },
+      { _id: 'rejected', count: rejectedCount },
+    ].filter(s => s.count > 0); // only show statuses with apps
 
-    // 4. Monthly breakdown
+    // 3. Applications by source (manual counts)
+    const linkedinCount = await Application.countDocuments({ userId, source: 'linkedin' });
+    const twitterCount = await Application.countDocuments({ userId, source: 'twitter' });
+    const referralCount = await Application.countDocuments({ userId, source: 'referral' });
+    const companySiteCount = await Application.countDocuments({ userId, source: 'company_site' });
+    const jobBoardCount = await Application.countDocuments({ userId, source: 'job_board' });
+    const otherCount = await Application.countDocuments({ userId, source: 'other' });
+
+    const sourceStats = [
+      { _id: 'linkedin', count: linkedinCount },
+      { _id: 'twitter', count: twitterCount },
+      { _id: 'referral', count: referralCount },
+      { _id: 'company_site', count: companySiteCount },
+      { _id: 'job_board', count: jobBoardCount },
+      { _id: 'other', count: otherCount },
+    ].filter(s => s.count > 0);
+
+    // 4. Monthly breakdown (keep aggregation, it's safe with dates)
     const monthlyStats = await Application.aggregate([
       { $match: { userId } },
       {
@@ -46,9 +64,6 @@ exports.getStats = async (req, res) => {
       ? Math.round((responded / totalApplications) * 100) 
       : 0;
 
-    // 6. Total offers
-    const totalOffers = statusStats.find(s => s._id === 'offer')?.count || 0;
-
     res.json({
       totalApplications,
       statusStats,
@@ -56,7 +71,7 @@ exports.getStats = async (req, res) => {
       monthlyStats,
       responseRate,
       avgDays: 4.2,
-      totalOffers,
+      totalOffers: offerCount,
     });
   } catch (error) {
     console.error('❌ Stats error:', error);
