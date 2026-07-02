@@ -7,18 +7,18 @@ exports.getStats = async (req, res) => {
 
     // 1. Total applications
     const totalApplications = await Application.countDocuments({ userId });
-    console.log(`📊 Total apps for ${userId}:`, totalApplications);
 
-    // 2. Applications by status — FIXED aggregation
+    // 2. Applications by status — ✅ FIXED: Use $project + $group
     const statusStats = await Application.aggregate([
       { $match: { userId } },
+      { $project: { status: 1 } }, // ✅ explicitly include status
       { $group: { _id: '$status', count: { $sum: 1 } } },
     ]);
-    console.log('📊 statusStats:', statusStats);
 
     // 3. Applications by source
     const sourceStats = await Application.aggregate([
       { $match: { userId } },
+      { $project: { source: 1 } },
       { $group: { _id: '$source', count: { $sum: 1 } } },
     ]);
 
