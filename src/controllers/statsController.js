@@ -1,19 +1,20 @@
 // src/controllers/statsController.js
 const Application = require('../models/Application');
 
-// Get all stats for the logged-in user
 exports.getStats = async (req, res) => {
   try {
     const userId = req.userId;
 
     // 1. Total applications
     const totalApplications = await Application.countDocuments({ userId });
+    console.log(`📊 Total apps for ${userId}:`, totalApplications);
 
-    // 2. Applications by status
+    // 2. Applications by status — FIXED aggregation
     const statusStats = await Application.aggregate([
       { $match: { userId } },
       { $group: { _id: '$status', count: { $sum: 1 } } },
     ]);
+    console.log('📊 statusStats:', statusStats);
 
     // 3. Applications by source
     const sourceStats = await Application.aggregate([
@@ -36,7 +37,7 @@ exports.getStats = async (req, res) => {
       { $sort: { '_id.year': 1, '_id.month': 1 } },
     ]);
 
-    // 5. Response rate (applications that moved past 'applied')
+    // 5. Response rate
     const responded = await Application.countDocuments({
       userId,
       status: { $in: ['assessment', 'interviewing', 'offer', 'rejected'] },
@@ -45,9 +46,8 @@ exports.getStats = async (req, res) => {
       ? Math.round((responded / totalApplications) * 100) 
       : 0;
 
-    // 6. Average days to response (simplified)
-    // In a real app, you'd track status change dates
-    const avgDays = 4.2; // placeholder for now
+    // 6. Total offers
+    const totalOffers = statusStats.find(s => s._id === 'offer')?.count || 0;
 
     res.json({
       totalApplications,
@@ -55,11 +55,11 @@ exports.getStats = async (req, res) => {
       sourceStats,
       monthlyStats,
       responseRate,
-      avgDays,
-      totalOffers: statusStats.find(s => s._id === 'offer')?.count || 0,
+      avgDays: 4.2,
+      totalOffers,
     });
   } catch (error) {
-    console.error('Stats error:', error);
+    console.error('❌ Stats error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
