@@ -1,17 +1,33 @@
 // src/utils/otp.js
-const crypto = require('crypto');
+import { Resend } from 'resend';
+import crypto from 'crypto';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Generate a 6-digit OTP
-const generateOtp = () => {
+export const generateOtp = () => {
   return crypto.randomInt(100000, 999999).toString();
 };
 
-// In production, you'll use Nodemailer or Resend here
-// For now, we'll just log the OTP (so we can test)
-const sendOtpEmail = async (email, otp) => {
-  console.log(`📧 OTP for ${email}: ${otp}`);
-  // TODO: Integrate with Resend or Nodemailer
-  return true;
-};
+// Send OTP via Resend
+export const sendOtpEmail = async (email, otp) => {
+  try {
+    const { data, error } = await resend.emails.send({
+      from: 'Kairo <onboarding@resend.dev>',
+      to: email,
+      subject: 'Reset your Kairo password',
+      text: `Your OTP code is: ${otp}`,
+    });
 
-module.exports = { generateOtp, sendOtpEmail };
+    if (error) {
+      console.error('Resend error:', error);
+      return false;
+    }
+
+    console.log('✅ OTP email sent to:', email);
+    return true;
+  } catch (error) {
+    console.error('Error sending email:', error);
+    return false;
+  }
+};
