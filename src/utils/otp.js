@@ -1,6 +1,6 @@
 // src/utils/otp.js
-import { Resend } from 'resend';
-import crypto from 'crypto';
+const { Resend } = require("resend");
+const crypto = require("crypto");
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
