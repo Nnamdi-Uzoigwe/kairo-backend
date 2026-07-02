@@ -1,16 +1,16 @@
 // src/utils/otp.js
-const { Resend } = require("resend");
-const crypto = require("crypto");
+const crypto = require('crypto');
+const { Resend } = require('resend');
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Generate a 6-digit OTP
-export const generateOtp = () => {
+const generateOtp = () => {
   return crypto.randomInt(100000, 999999).toString();
 };
 
 // Send OTP via Resend
-export const sendOtpEmail = async (email, otp) => {
+const sendOtpEmail = async (email, otp) => {
   try {
     const { data, error } = await resend.emails.send({
       from: 'Kairo <onboarding@resend.dev>',
@@ -31,3 +31,5 @@ export const sendOtpEmail = async (email, otp) => {
     return false;
   }
 };
+
+module.exports = { generateOtp, sendOtpEmail };
